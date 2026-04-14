@@ -1,4 +1,3 @@
-// plugins/pair.js - tries API first, falls back to links
 import { Module } from '../lib/plugins.js';
 
 Module({
@@ -6,12 +5,21 @@ Module({
   package: "main",
   description: "Pair your WhatsApp number with this bot",
 })(async (message, match) => {
-  let number = match && match[0] ? match[0].trim() : null;
+  // match can be string or array; handle both
+  let number = null;
+  if (typeof match === 'string') {
+    number = match.trim();
+  } else if (Array.isArray(match) && match.length > 0) {
+    number = match[0] ? match[0].trim() : null;
+  } else {
+    number = null;
+  }
+
   const WEB_URL = "https://akash-xmd-mini.onrender.com/";
   const TG_BOT = "https://t.me/AKASH_MINI_BOT";
 
-  // If no number, show help
-  if (!number) {
+  // If no number provided, show help
+  if (!number || number === "") {
     await message.conn.sendMessage(message.from, {
       text: `╭━━━「 🐉✨ 𝐀𝐊𝐀𝐒𝐇 𝐗𝐌𝐃 𝐌𝐈𝐍𝐈 ✨🐉 」━━━┈⊷
 ┃
@@ -30,10 +38,13 @@ Module({
     return;
   }
 
+  // Clean number: remove any non-digit (including +, spaces, dashes)
   let cleanNumber = number.replace(/\D/g, '');
+  
+  // Validate length (10-15 digits)
   if (cleanNumber.length < 10 || cleanNumber.length > 15) {
     await message.conn.sendMessage(message.from, {
-      text: `❌ Invalid number. Use country code without '+'.\nTry: .pair 919876543210`
+      text: `❌ Invalid number: ${number}\nUse country code without '+' (e.g., 919876543210)\nTry: .pair 919876543210`
     });
     return;
   }
@@ -62,7 +73,7 @@ Module({
 
 After pairing, this bot will work for *+${cleanNumber}* automatically!`
       });
-      return; // success, exit
+      return;
     } else {
       throw new Error(data.error || "API returned error");
     }

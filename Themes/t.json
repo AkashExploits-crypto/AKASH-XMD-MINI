@@ -1,0 +1,15 @@
+{
+    "isGroup": "_This command is only for groups._",
+    "isAdmin": "_Only group admins or bot owner can use this command._",
+    "isBotAdmin": "AKASH-XMD-MINI",
+    "fromMe": "only bot use",
+    "isfromMe": "_Only bot owner can use this command._",
+    "botName": "AKASH-XMD-MINI",
+    "owner": "AKASH",
+    "image": "https://uploads.onecompiler.io/444ewq55c/44k38nq7p/1000592902.jpg",
+    "other": {
+      "connected": "✅ AKASH-XMD-MINI bot has connected",
+      "footer": "© AKASH-XMD-MINI Bot",
+      "error": "an error occured gbot"
+    }
+  }

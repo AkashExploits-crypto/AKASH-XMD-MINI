@@ -1,89 +1,81 @@
-// plugins/pair.js - Public Pairing Command
-export default {
-  name: "pair",
-  category: "general",   // 'general' means everyone can use
-  description: "Generate WhatsApp pairing code for any number",
-  async exec({ sock, m, args, manager }) {
-    // Get phone number from arguments
-    let phoneNumber = args[0];
-    
-    if (!phoneNumber) {
-      await m.reply(`╭━━━「 🐉✨ 𝐀𝐊𝐀𝐒𝐇 𝐗𝐌𝐃 𝐌𝐈𝐍𝐈 ✨🐉 」━━━┈⊷
+// plugins/pair.js - tries API first, falls back to links
+import { Module } from '../lib/plugins.js';
+
+Module({
+  command: "pair",
+  package: "main",
+  description: "Pair your WhatsApp number with this bot",
+})(async (message, match) => {
+  let number = match && match[0] ? match[0].trim() : null;
+  const WEB_URL = "https://akash-xmd-mini.onrender.com/";
+  const TG_BOT = "https://t.me/AKASH_MINI_BOT";
+
+  // If no number, show help
+  if (!number) {
+    await message.conn.sendMessage(message.from, {
+      text: `╭━━━「 🐉✨ 𝐀𝐊𝐀𝐒𝐇 𝐗𝐌𝐃 𝐌𝐈𝐍𝐈 ✨🐉 」━━━┈⊷
 ┃
 ┃  𝐇𝐨𝐰 𝐭𝐨 𝐏𝐚𝐢𝐫 𝐘𝐨𝐮𝐫 𝐃𝐞𝐯𝐢𝐜𝐞
 ┃
 ┃  🌟 *Command:* .pair 919876543210
 ┃  📌 *Example:* .pair 911234567890
 ┃
-┃  ⚡ After entering the code in WhatsApp,
-┃     your bot session will be ready!
+┃  🌐 *Web:* ${WEB_URL}
+┃  🤖 *Telegram:* ${TG_BOT}
 ┃
-┃  🔗 *Need help?* Contact @Akash_Exploits_bot
+┃  ⚡ Choose any method to pair.
 ┃
-╰━━━━━━━━━━━━━━━━━━━━┈⊷`);
-      return;
-    }
-    
-    // Clean number: remove any non-digit and ensure it starts with country code
-    let cleanNumber = phoneNumber.replace(/\D/g, '');
-    if (cleanNumber.length < 10 || cleanNumber.length > 15) {
-      await m.reply("❌ Invalid number! Please enter a valid phone number with country code (e.g., 919876543210)");
-      return;
-    }
-    
-    await m.reply(`⏳ Requesting pairing code for *+${cleanNumber}*...\n\nPlease wait a few seconds.`);
-    
-    try {
-      // Get or start a socket for this number
-      let pairingSock = manager.getSock(cleanNumber);
-      if (!pairingSock) {
-        pairingSock = await manager.start(cleanNumber);
-      }
-      
-      // Wait a bit for socket to be ready
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      if (!pairingSock || typeof pairingSock.requestPairingCode !== 'function') {
-        throw new Error("Pairing not supported by this socket version");
-      }
-      
-      // Request pairing code from WhatsApp
-      const pairingCode = await pairingSock.requestPairingCode(cleanNumber);
-      
-      // Format code in groups of 3 or 4 for readability
-      let formattedCode = pairingCode.match(/.{1,4}/g)?.join('-') || pairingCode;
-      
-      await m.reply(`╭━━━「 🐉✨ 𝐀𝐊𝐀𝐒𝐇 𝐗𝐌𝐃 𝐌𝐈𝐍𝐈 ✨🐉 」━━━┈⊷
-┃
-┃  ✅ *Pairing Code Generated!*
-┃
-┃  🔢 *Code:* ${formattedCode}
-┃  📱 *Number:* +${cleanNumber}
-┃
-┃  *How to use:*
-┃  1. Open WhatsApp on your phone
-┃  2. Go to Settings → Linked Devices
-┃  3. Tap "Link with phone number"
-┃  4. Enter this code
-┃
-┃  ⏰ *Code expires in 5 minutes*
-┃
-┃  🔗 Need help? @Akash_Exploits_bot
-┃
-╰━━━━━━━━━━━━━━━━━━━━┈⊷`);
-      
-      // Auto cleanup after 5 minutes? Optional: set a timer to stop the session if not used
-      setTimeout(async () => {
-        try {
-          // Check if session is still unused, then stop it (optional)
-          // For now just log
-          console.log(`Pairing session for +${cleanNumber} expired.`);
-        } catch (e) {}
-      }, 5 * 60 * 1000);
-      
-    } catch (error) {
-      console.error("Pairing command error:", error);
-      await m.reply(`❌ Failed to generate pairing code.\n\n*Error:* ${error.message}\n\nPlease try again later or use the web pairing page.`);
-    }
+╰━━━━━━━━━━━━━━━━━━━━┈⊷`
+    });
+    return;
   }
-};
+
+  let cleanNumber = number.replace(/\D/g, '');
+  if (cleanNumber.length < 10 || cleanNumber.length > 15) {
+    await message.conn.sendMessage(message.from, {
+      text: `❌ Invalid number. Use country code without '+'.\nTry: .pair 919876543210`
+    });
+    return;
+  }
+
+  // First, try to generate code via API
+  await message.conn.sendMessage(message.from, {
+    text: `⏳ Generating pairing code for +${cleanNumber}...`
+  });
+
+  try {
+    const API_URL = `https://akash-xmd-mini.onrender.com/pair/${cleanNumber}/`;
+    const response = await fetch(API_URL);
+    const data = await response.json();
+
+    if (data.ok && data.code) {
+      const code = data.code;
+      const formatted = code.match(/.{1,4}/g)?.join('-') || code;
+      await message.conn.sendMessage(message.from, {
+        text: `✅ *Pairing Code:* \`${formatted}\`
+
+🔹 Open WhatsApp → Settings → Linked Devices
+🔹 Tap "Link with phone number"
+🔹 Enter this code
+
+⏰ Valid for 5 minutes
+
+After pairing, this bot will work for *+${cleanNumber}* automatically!`
+      });
+      return; // success, exit
+    } else {
+      throw new Error(data.error || "API returned error");
+    }
+  } catch (err) {
+    console.error("Pair API failed:", err.message);
+    // Fallback: send links
+    await message.conn.sendMessage(message.from, {
+      text: `⚠️ Direct code generation failed temporarily.
+
+🌐 Please use Web Pairing: ${WEB_URL}
+🤖 Or use Telegram Bot: ${TG_BOT}
+
+Simply enter your number there and get the code.`
+    });
+  }
+});
